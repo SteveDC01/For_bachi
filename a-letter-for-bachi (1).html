@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>A Letter Left Open — For Bachi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+/* ─── RESET ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0a0a0c;
+  --surface:   #121214;
+  --surface2:  #1a1a1e;
+  --border:    rgba(255,255,255,0.07);
+  --ivory:     #f0ead8;
+  --ivory-dim: rgba(240,234,216,0.5);
+  --ivory-faint:rgba(240,234,216,0.25);
+  --sage:      #8fa48a;
+  --lavender:  #9d96b0;
+  --rose:      #b08a8a;
+  --serif:     'EB Garamond', 'Palatino Linotype', Georgia, serif;
+  --sans:      'Inter', system-ui, -apple-system, sans-serif;
+  --ease:      cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out:  cubic-bezier(0, 0, 0.2, 1);
+  --spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--ivory);
+  font-family: var(--serif);
+  font-size: clamp(16px, 2vw, 18px);
+  line-height: 1.75;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  /* iOS safe area */
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+body.overlay-open { overflow: hidden; }
+
+/* Film grain */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999; opacity: 0.4; mix-blend-mode: overlay;
+}
+
+/* ─── SCROLL PROGRESS ────────────────────────────────────────── */
+#scroll-bar {
+  position: fixed; top: 0; left: 0;
+  height: 2px; width: 0%;
+  background: linear-gradient(90deg, var(--sage), var(--lavender), var(--rose));
+  z-index: 8000; pointer-events: none;
+  transition: width 0.1s linear;
+}
+
+/* ─── TYPOGRAPHY ─────────────────────────────────────────────── */
+.serif { font-family: var(--serif); }
+.sans  { font-family: var(--sans); }
+
+/* ─── SCREEN MANAGEMENT ──────────────────────────────────────── */
+.screen {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transition: opacity 1.2s var(--ease), visibility 1.2s;
+  z-index: 100;
+}
+.screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* ─── OPENING SCREEN ─────────────────────────────────────────── */
+#screen-open { background: var(--bg); padding: clamp(2rem,6vw,4rem); }
+#screen-open canvas#particles-canvas {
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+}
+#screen-open .open-inner {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 0;
+}
+#screen-open .open-eyebrow {
+  font-family: var(--sans); font-size: 0.65rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--sage); opacity: 0;
+  margin-bottom: 1.8rem; transition: opacity 1s 0.2s var(--ease-out);
+}
+#screen-open .open-text {
+  font-size: clamp(1.6rem, 4.5vw, 2.4rem); font-weight: 400;
+  letter-spacing: 0.01em; color: var(--ivory); max-width: 32ch;
+  opacity: 0; transform: translateY(14px);
+  transition: opacity 1.4s var(--ease-out), transform 1.4s var(--ease-out);
+}
+#screen-open .open-sub {
+  font-family: var(--sans); font-size: clamp(0.78rem, 2vw, 0.9rem);
+  color: var(--ivory-dim); font-weight: 300; letter-spacing: 0.06em;
+  margin-top: 1.4rem; opacity: 0; transform: translateY(10px);
+  transition: opacity 1.4s 0.5s var(--ease-out), transform 1.4s 0.5s var(--ease-out);
+}
+#screen-open .open-btn {
+  margin-top: 3.2rem; opacity: 0;
+  transition: opacity 1s 1.3s var(--ease-out);
+}
+#screen-open.ready .open-eyebrow,
+#screen-open.ready .open-text,
+#screen-open.ready .open-sub,
+#screen-open.ready .open-btn { opacity: 1; transform: none; }
+
+/* ─── SOUND & AMBIENT TOGGLE ─────────────────────────────────── */
+#sound-btn {
+  position: fixed; top: max(1.2rem, env(safe-area-inset-top, 1.2rem)); right: 1.4rem;
+  z-index: 500; background: none; border: 1px solid var(--border);
+  color: var(--ivory-dim); font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.14em; text-transform: uppercase; padding: 0.5rem 0.9rem;
+  cursor: pointer; transition: color 0.3s, border-color 0.3s;
+  min-width: 44px; min-height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 0; opacity: 0; pointer-events: none; gap: 6px;
+}
+#sound-btn.visible { opacity: 1; pointer-events: auto; transition: opacity 0.6s, color 0.3s, border-color 0.3s; }
+#sound-btn:hover { color: var(--ivory); border-color: var(--ivory-dim); }
+#sound-btn.on { color: var(--sage); border-color: var(--sage); }
+
+/* ─── BUTTONS ────────────────────────────────────────────────── */
+.btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--sans); font-size: 0.72rem; font-weight: 400;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ivory-dim); border: 1px solid rgba(240,234,216,0.22);
+  padding: 0.88rem 2.4rem; background: transparent; cursor: pointer;
+  transition: color 0.4s, border-color 0.4s, background 0.4s, transform 0.2s;
+  border-radius: 0; min-height: 44px; min-width: 44px;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  -webkit-appearance: none;
+}
+.btn-ghost:hover { color: var(--ivory); border-color: rgba(240,234,216,0.5); background: rgba(240,234,216,0.04); }
+.btn-ghost:active { transform: scale(0.97); }
+
+/* ─── MAIN ────────────────────────────────────────────────────── */
+#main {
+  opacity: 0; transition: opacity 1.6s var(--ease-out);
+  position: relative; z-index: 10;
+}
+#main.visible { opacity: 1; }
+
+/* ─── SECTIONS ───────────────────────────────────────────────── */
+section {
+  padding: clamp(5rem, 12vw, 9rem) clamp(1.5rem, 8vw, 5rem);
+  max-width: 880px; margin: 0 auto;
+}
+.section-label {
+  font-family: var(--sans); font-size: 0.67rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--sage); margin-bottom: 2.2rem; opacity: 0.7;
+}
+
+/* ─── REVEAL ─────────────────────────────────────────────────── */
+.reveal {
+  opacity: 0; transform: translateY(22px);
+  transition: opacity 1s var(--ease-out), transform 1s var(--ease-out);
+}
+.reveal.in-view { opacity: 1; transform: none; }
+.reveal-delay-1 { transition-delay: 0.15s; }
+.reveal-delay-2 { transition-delay: 0.3s; }
+.reveal-delay-3 { transition-delay: 0.45s; }
+.reveal-delay-4 { transition-delay: 0.6s; }
+.reveal-delay-5 { transition-delay: 0.75s; }
+
+/* ─── LETTER SECTION ──────────────────────────────────────────── */
+#letter {
+  padding-top: clamp(7rem, 15vw, 12rem);
+  border-bottom: 1px solid var(--border);
+}
+#letter .letter-date {
+  font-family: var(--sans); font-size: 0.68rem; letter-spacing: 0.15em;
+  color: var(--lavender); opacity: 0.6; margin-bottom: 0.8rem; display: block;
+}
+#letter h1 {
+  font-size: clamp(1.8rem, 5.5vw, 3rem); font-weight: 400; font-style: italic;
+  line-height: 1.25; margin-bottom: 2.8rem; max-width: 28ch; color: var(--ivory);
+}
+#letter .letter-body {
+  font-size: clamp(1rem, 2.2vw, 1.15rem); color: var(--ivory-dim);
+  max-width: 58ch; line-height: 1.95;
+}
+#letter .letter-body p + p { margin-top: 1.5em; }
+#letter .letter-body .drop-cap::first-letter {
+  font-size: 3.4em; line-height: 0.7; float: left; margin-right: 0.1em;
+  margin-top: 0.1em; color: var(--ivory); font-style: normal;
+}
+#letter .signature {
+  margin-top: 3.5rem; font-style: italic;
+  color: var(--sage); font-size: 1rem; opacity: 0.85;
+}
+.ink-line {
+  display: block; height: 1px; background: linear-gradient(90deg, var(--sage), transparent);
+  margin: 2.5rem 0; max-width: 200px; opacity: 0.3;
+}
+
+/* ─── DOORS SECTION ───────────────────────────────────────────── */
+#doors { border-bottom: 1px solid var(--border); }
+#doors h2 {
+  font-size: clamp(1.1rem, 3vw, 1.55rem); font-weight: 400;
+  margin-bottom: 3rem; color: var(--ivory); max-width: 42ch; line-height: 1.45;
+}
+.doors-grid {
+  display: grid; grid-template-columns: 1fr;
+  gap: 1px; background: var(--border); border: 1px solid var(--border);
+}
+@media (min-width: 600px) { .doors-grid { grid-template-columns: repeat(3, 1fr); } }
+.door-card {
+  background: var(--surface); padding: 2.6rem 2.2rem; cursor: pointer;
+  transition: background 0.5s var(--ease); position: relative; overflow: hidden;
+  text-align: left; border: none; width: 100%;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  min-height: 44px;
+}
+.door-card::before {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--sage), var(--lavender));
+  transform: scaleX(0); transform-origin: left; transition: transform 0.5s var(--ease);
+}
+.door-card:hover, .door-card:focus-visible { background: #1c1c22; outline: none; }
+.door-card:hover::before, .door-card:focus-visible::before { transform: scaleX(1); }
+.door-card:active { background: #202028; }
+.door-card .door-num {
+  font-family: var(--sans); font-size: 0.6rem; letter-spacing: 0.2em;
+  color: var(--lavender); opacity: 0.65; margin-bottom: 1.2rem; display: block;
+}
+.door-card h3 {
+  font-family: var(--serif); font-size: clamp(0.95rem, 2.5vw, 1.12rem);
+  font-weight: 400; line-height: 1.4; color: var(--ivory);
+}
+.door-card .door-desc {
+  font-family: var(--sans); font-size: 0.75rem; color: var(--ivory-faint);
+  margin-top: 0.8rem; line-height: 1.5; letter-spacing: 0.01em;
+}
+.door-card .door-arrow {
+  font-family: var(--sans); font-size: 0.78rem; color: var(--sage);
+  margin-top: 1.6rem; opacity: 0; transform: translateX(-6px);
+  transition: opacity 0.3s, transform 0.3s; display: block; letter-spacing: 0.06em;
+}
+.door-card:hover .door-arrow,
+.door-card:focus-visible .door-arrow { opacity: 0.75; transform: none; }
+
+/* ─── BREATHING SECTION ───────────────────────────────────────── */
+#breathe { border-bottom: 1px solid var(--border); text-align: center; }
+#breathe h2 {
+  font-size: clamp(1.1rem, 3vw, 1.55rem); font-weight: 400;
+  margin-bottom: 1rem; color: var(--ivory);
+}
+#breathe .breathe-sub {
+  font-family: var(--sans); font-size: 0.8rem; color: var(--ivory-dim);
+  margin-bottom: 3rem; letter-spacing: 0.04em;
+}
+.breathe-ring-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 2rem;
+}
+.breathe-ring {
+  width: clamp(140px, 35vw, 200px); height: clamp(140px, 35vw, 200px);
+  border-radius: 50%; border: 1.5px solid rgba(143,164,138,0.25);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; cursor: pointer; transition: all 0.3s;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.breathe-ring::before {
+  content: ''; position: absolute; inset: -1px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(143,164,138,0.08) 0%, transparent 70%);
+  transition: all 4s ease-in-out;
+}
+.breathe-ring.inhaling {
+  transform: scale(1.22);
+  border-color: rgba(143,164,138,0.55);
+  box-shadow: 0 0 40px rgba(143,164,138,0.12), 0 0 80px rgba(143,164,138,0.06);
+}
+.breathe-ring.exhaling {
+  transform: scale(0.86);
+  border-color: rgba(157,150,176,0.3);
+}
+.breathe-ring.holding {
+  border-color: rgba(240,234,216,0.3);
+}
+.breathe-inner {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.3rem; transition: opacity 0.5s;
+}
+.breathe-instruction {
+  font-size: clamp(0.85rem, 2.5vw, 1rem); color: var(--ivory); font-style: italic;
+}
+.breathe-count {
+  font-family: var(--mono, var(--sans)); font-size: clamp(1.4rem, 4vw, 1.8rem);
+  font-weight: 300; color: var(--sage); min-width: 2ch; text-align: center;
+}
+.breathe-btn {
+  font-family: var(--sans); font-size: 0.68rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ivory-dim); background: none;
+  border: 1px solid var(--border); padding: 0.7rem 1.6rem; cursor: pointer;
+  transition: all 0.3s; min-height: 44px;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.breathe-btn:hover { color: var(--ivory); border-color: var(--ivory-dim); }
+.breathe-cycles {
+  font-family: var(--sans); font-size: 0.65rem; color: var(--ivory-faint);
+  letter-spacing: 0.1em;
+}
+
+/* ─── CONSTELLATION SECTION ───────────────────────────────────── */
+#constellation { padding: 0; max-width: none; border-bottom: 1px solid var(--border); }
+#constellation-inner {
+  max-width: 880px; margin: 0 auto;
+  padding: clamp(5rem, 12vw, 9rem) clamp(1.5rem, 8vw, 5rem) 3rem;
+}
+#constellation-inner h2 {
+  font-size: clamp(1.1rem, 3vw, 1.55rem); font-weight: 400;
+  margin-bottom: 1rem; color: var(--ivory);
+}
+#constellation-inner .star-hint {
+  font-family: var(--sans); font-size: 0.8rem; color: var(--ivory-dim);
+  letter-spacing: 0.04em; margin-bottom: 2.5rem;
+}
+#star-canvas {
+  display: block; width: 100%; height: clamp(340px, 65vw, 540px); cursor: default;
+}
+.star-tooltip {
+  position: fixed;
+  background: rgba(18,18,20,0.97); border: 1px solid var(--border);
+  padding: 1.1rem 1.5rem; max-width: min(300px, 90vw);
+  pointer-events: none; font-family: var(--serif); font-size: 0.95rem;
+  font-style: italic; color: var(--ivory); opacity: 0;
+  transition: opacity 0.4s var(--ease); z-index: 500; line-height: 1.75;
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.star-tooltip.visible { opacity: 1; }
+.star-tooltip .tooltip-close {
+  display: none; /* shown on mobile via JS */
+}
+
+/* ─── MEMORIES SECTION ────────────────────────────────────────── */
+#memories { border-bottom: 1px solid var(--border); }
+#memories h2 {
+  font-size: clamp(1.1rem, 3vw, 1.55rem); font-weight: 400;
+  margin-bottom: 3rem; color: var(--ivory);
+}
+.memory-list { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+.memory-item {
+  background: var(--surface); padding: 1.7rem 2rem;
+  font-size: clamp(0.95rem, 2.3vw, 1.15rem); font-style: italic;
+  color: var(--ivory-dim); line-height: 1.55;
+  transition: background 0.4s, color 0.4s, padding-left 0.4s;
+  cursor: pointer; position: relative; overflow: hidden;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  display: flex; align-items: center; gap: 1rem;
+  min-height: 44px;
+}
+.memory-item::after {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+  background: linear-gradient(90deg, rgba(143,164,138,0.07), transparent);
+  transition: width 0.5s var(--ease);
+}
+.memory-item:hover, .memory-item:focus-visible {
+  background: #181820; color: var(--ivory); padding-left: 2.4rem; outline: none;
+}
+.memory-item:hover::after, .memory-item:focus-visible::after { width: 100%; }
+.memory-dash {
+  color: var(--sage); opacity: 0.55; font-style: normal; flex-shrink: 0;
+  transition: opacity 0.3s;
+}
+.memory-item:hover .memory-dash { opacity: 1; }
+.memory-text { flex: 1; }
+.memory-heart {
+  flex-shrink: 0; font-size: 0.75rem; opacity: 0; transition: opacity 0.3s, transform 0.3s;
+  transform: scale(0.7); color: var(--rose);
+}
+.memory-item.collected .memory-heart { opacity: 1; transform: scale(1); }
+.memory-item.collected { color: var(--ivory); }
+
+/* ─── ENVELOPES SECTION ───────────────────────────────────────── */
+#envelopes { border-bottom: 1px solid var(--border); }
+#envelopes h2 {
+  font-size: clamp(1.1rem, 3vw, 1.55rem); font-weight: 400;
+  margin-bottom: 3rem; color: var(--ivory);
+}
+.envelope-grid {
+  display: grid; grid-template-columns: 1fr; gap: 0.7rem;
+}
+@media (min-width: 560px) { .envelope-grid { grid-template-columns: repeat(2, 1fr); } }
+.envelope-card {
+  border: 1px solid var(--border); padding: 1.7rem 1.9rem; cursor: pointer;
+  background: transparent; transition: background 0.4s, border-color 0.4s, transform 0.2s;
+  display: flex; align-items: flex-start; gap: 1rem; text-align: left;
+  width: 100%; font-family: inherit;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  min-height: 44px; border-radius: 0; -webkit-appearance: none;
+  position: relative; overflow: hidden;
+}
+.envelope-card::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(143,164,138,0.04), transparent);
+  opacity: 0; transition: opacity 0.4s;
+}
+.envelope-card:hover, .envelope-card:focus-visible {
+  background: rgba(143,164,138,0.05); border-color: rgba(143,164,138,0.28);
+  outline: none;
+}
+.envelope-card:hover::after { opacity: 1; }
+.envelope-card:active { transform: scale(0.98); }
+.envelope-icon { flex-shrink: 0; width: 20px; margin-top: 4px; opacity: 0.45; transition: opacity 0.3s; }
+.envelope-card:hover .envelope-icon { opacity: 0.75; }
+.envelope-info { flex: 1; }
+.envelope-title {
+  font-family: var(--serif); font-size: clamp(0.9rem, 2.3vw, 1rem);
+  font-style: italic; color: var(--ivory); line-height: 1.4; display: block;
+}
+.envelope-tag {
+  font-family: var(--sans); font-size: 0.6rem; letter-spacing: 0.14em;
+  color: var(--lavender); opacity: 0.55; text-transform: uppercase;
+  display: block; margin-top: 0.4rem;
+}
+
+/* ─── FINAL SECTION ───────────────────────────────────────────── */
+#final {
+  text-align: center;
+  padding-bottom: calc(clamp(8rem, 18vw, 14rem) + env(safe-area-inset-bottom));
+}
+#final .final-lines { display: flex; flex-direction: column; gap: 1.6rem; margin-bottom: 4rem; }
+#final .final-line {
+  font-size: clamp(1rem, 3.2vw, 1.5rem); font-weight: 400; color: var(--ivory);
+}
+#final .final-line:nth-child(2) { color: var(--ivory-dim); font-style: italic; }
+#final .final-line:nth-child(3) { color: var(--ivory-faint); }
+.safety-note {
+  font-family: var(--sans); font-size: 0.72rem; color: rgba(240,234,216,0.3);
+  max-width: 55ch; margin: 0 auto 3.5rem; line-height: 1.9; letter-spacing: 0.02em;
+}
+.final-candle {
+  display: flex; justify-content: center; margin-bottom: 2.5rem;
+}
+.candle-svg { opacity: 0.6; }
+.flame { transform-origin: 50% 100%; animation: flicker 2.8s ease-in-out infinite; }
+@keyframes flicker {
+  0%,100% { transform: scaleX(1) scaleY(1) rotate(-1deg); opacity: 0.9; }
+  20%      { transform: scaleX(0.88) scaleY(1.08) rotate(2deg); opacity: 1; }
+  50%      { transform: scaleX(1.05) scaleY(0.96) rotate(-2deg); opacity: 0.85; }
+  75%      { transform: scaleX(0.92) scaleY(1.06) rotate(1deg); opacity: 0.95; }
+}
+.flame-glow { animation: flicker-glow 2.8s ease-in-out infinite; }
+@keyframes flicker-glow {
+  0%,100% { opacity: 0.15; }
+  20%     { opacity: 0.22; }
+  50%     { opacity: 0.1; }
+  75%     { opacity: 0.18; }
+}
+
+/* ─── OVERLAY / MODAL ─────────────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(8,8,10,0.94);
+  display: flex; align-items: center; justify-content: center;
+  padding: clamp(1rem,4vw,2rem);
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 1000; opacity: 0; visibility: hidden;
+  transition: opacity 0.6s var(--ease), visibility 0.6s;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.overlay.open { opacity: 1; visibility: visible; }
+.overlay-box {
+  max-width: min(580px, 100%); width: 100%;
+  border: 1px solid var(--border); background: var(--surface);
+  padding: clamp(2rem, 6vw, 3.8rem);
+  position: relative; transform: translateY(20px);
+  transition: transform 0.6s var(--ease-out);
+  margin: auto;
+}
+.overlay.open .overlay-box { transform: none; }
+.overlay-close {
+  position: absolute; top: 1.2rem; right: 1.4rem;
+  font-family: var(--sans); font-size: 0.68rem; letter-spacing: 0.16em;
+  color: var(--ivory-dim); cursor: pointer; background: none; border: none;
+  transition: color 0.3s; min-height: 44px; min-width: 44px;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.overlay-close:hover { color: var(--ivory); }
+.overlay-label {
+  font-family: var(--sans); font-size: 0.62rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--sage); margin-bottom: 1.6rem; opacity: 0.75;
+}
+.overlay-title {
+  font-size: clamp(1.15rem, 3vw, 1.6rem); font-weight: 400;
+  margin-bottom: 2rem; color: var(--ivory); line-height: 1.35;
+  font-style: italic;
+}
+.overlay-body {
+  font-size: clamp(0.95rem, 2.2vw, 1.06rem); color: var(--ivory-dim); line-height: 1.95;
+}
+.overlay-body p + p { margin-top: 1.3em; }
+.overlay-divider {
+  height: 1px; background: var(--border); margin: 2rem 0;
+}
+
+/* ─── CLOSING SCREEN ──────────────────────────────────────────── */
+#screen-close {
+  background: var(--bg); flex-direction: column; gap: 0; padding: 2rem; z-index: 200;
+}
+#screen-close .close-text {
+  font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--ivory-dim); text-align: center;
+  animation: breathe-text 4s ease-in-out infinite;
+}
+@keyframes breathe-text { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+/* ─── SCROLLBAR ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(240,234,216,0.08); }
+
+/* ─── REDUCED MOTION ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- Scroll progress bar -->
+<div id="scroll-bar"></div>
+
+<!-- Sound toggle -->
+<button id="sound-btn" aria-label="Toggle ambient sound">
+  <span id="sound-icon">♪</span>
+  <span id="sound-label">ambient</span>
+</button>
+
+<!-- ░░ OPENING SCREEN ░░ -->
+<div id="screen-open" class="screen">
+  <canvas id="particles-canvas" aria-hidden="true"></canvas>
+  <div class="open-inner">
+    <p class="open-eyebrow sans">A quiet space</p>
+    <p class="open-text serif" id="open-text">I made you a little place, Bachi.</p>
+    <p class="open-sub sans">You don't have to do anything here. Just be.</p>
+    <div class="open-btn">
+      <button class="btn-ghost sans" id="btn-enter">Enter quietly</button>
+    </div>
+  </div>
+</div>
+
+<!-- ░░ CLOSING SCREEN ░░ -->
+<div id="screen-close" class="screen hidden">
+  <p class="close-text">Until whenever. Take care of yourself.</p>
+</div>
+
+<!-- ░░ STAR TOOLTIP ░░ -->
+<div class="star-tooltip" id="star-tooltip" role="status" aria-live="polite"></div>
+
+<!-- ░░ OVERLAY ░░ -->
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
+  <div class="overlay-box">
+    <button class="overlay-close sans" id="overlay-close" aria-label="Close">close ×</button>
+    <div class="overlay-label sans" id="overlay-label"></div>
+    <div class="overlay-title serif" id="overlay-title"></div>
+    <div class="overlay-divider"></div>
+    <div class="overlay-body serif" id="overlay-body"></div>
+  </div>
+</div>
+
+<!-- ░░ MAIN ░░ -->
+<div id="main">
+
+  <!-- 1. LETTER -->
+  <section id="letter">
+    <p class="section-label sans reveal">A letter</p>
+    <span class="letter-date sans reveal reveal-delay-1" id="letter-date"></span>
+    <h1 class="reveal reveal-delay-2">For the days that feel heavier than they should.</h1>
+    <div class="ink-line reveal reveal-delay-2"></div>
+    <div class="letter-body reveal reveal-delay-3" id="letter-body"></div>
+    <p class="signature reveal reveal-delay-4" id="letter-signature"></p>
+  </section>
+
+  <!-- 2. DOORS -->
+  <section id="doors">
+    <p class="section-label sans reveal">Five doors</p>
+    <h2 class="reveal reveal-delay-1">Wherever you are right now, one of these is probably for you.</h2>
+    <div class="doors-grid reveal reveal-delay-2" id="doors-grid"></div>
+  </section>
+
+  <!-- 3. BREATHING -->
+  <section id="breathe">
+    <p class="section-label sans reveal">A small pause</p>
+    <h2 class="reveal reveal-delay-1">If things feel overwhelming right now.</h2>
+    <p class="breathe-sub sans reveal reveal-delay-2">A 4-7-8 breathing exercise. Just press start.</p>
+    <div class="breathe-ring-wrap reveal reveal-delay-3">
+      <div class="breathe-ring" id="breathe-ring" role="button" aria-label="Breathing exercise" tabindex="0">
+        <div class="breathe-inner">
+          <span class="breathe-instruction" id="breathe-instruction">press to begin</span>
+          <span class="breathe-count" id="breathe-count"></span>
+        </div>
+      </div>
+      <span class="breathe-cycles sans" id="breathe-cycles"></span>
+      <button class="breathe-btn sans" id="breathe-toggle">Start breathing</button>
+    </div>
+  </section>
+
+  <!-- 4. CONSTELLATION -->
+  <section id="constellation" style="max-width:none;">
+    <div id="constellation-inner">
+      <p class="section-label sans reveal">The constellation</p>
+      <h2 class="reveal reveal-delay-1">A few things I keep meaning to tell you.</h2>
+      <p class="star-hint sans reveal reveal-delay-2">Touch a brighter star to read what it holds.</p>
+    </div>
+    <canvas id="star-canvas" aria-label="Interactive star field — tap brighter stars to read messages"></canvas>
+  </section>
+
+  <!-- 5. MEMORIES -->
+  <section id="memories">
+    <p class="section-label sans reveal">Things I hope you remember</p>
+    <h2 class="reveal reveal-delay-1">Not wisdom. Just reminders.</h2>
+    <p class="sans reveal reveal-delay-2" style="font-size:0.78rem;color:var(--ivory-faint);letter-spacing:0.06em;margin-bottom:2rem;">Tap any line to keep it with you.</p>
+    <div class="memory-list reveal reveal-delay-3" id="memory-list"></div>
+    <p class="sans" id="collected-note" style="font-size:0.7rem;color:var(--sage);margin-top:1.5rem;opacity:0;transition:opacity 0.6s;letter-spacing:0.08em;"></p>
+  </section>
+
+  <!-- 6. ENVELOPES -->
+  <section id="envelopes">
+    <p class="section-label sans reveal">Open when</p>
+    <h2 class="reveal reveal-delay-1">For the specific kinds of hard.</h2>
+    <div class="envelope-grid reveal reveal-delay-2" id="envelope-grid"></div>
+  </section>
+
+  <!-- 7. FINAL -->
+  <section id="final">
+    <div class="final-candle reveal">
+      <svg class="candle-svg" width="40" height="80" viewBox="0 0 40 80" fill="none" aria-hidden="true">
+        <!-- Glow -->
+        <ellipse class="flame-glow" cx="20" cy="22" rx="14" ry="18" fill="rgba(240,200,100,0.12)"/>
+        <!-- Flame -->
+        <g class="flame">
+          <ellipse cx="20" cy="26" rx="5" ry="8" fill="rgba(240,200,80,0.9)"/>
+          <ellipse cx="20" cy="22" rx="3" ry="6" fill="rgba(255,230,120,1)"/>
+          <ellipse cx="20" cy="20" rx="1.5" ry="3" fill="rgba(255,255,200,0.9)"/>
+        </g>
+        <!-- Wick -->
+        <line x1="20" y1="34" x2="20" y2="38" stroke="rgba(240,234,216,0.4)" stroke-width="1"/>
+        <!-- Candle body -->
+        <rect x="13" y="38" width="14" height="36" rx="1" fill="rgba(240,234,216,0.08)" stroke="rgba(240,234,216,0.15)" stroke-width="0.5"/>
+        <!-- Wax drip -->
+        <path d="M13 45 Q11 52 13 56 L13 45Z" fill="rgba(240,234,216,0.05)"/>
+      </svg>
+    </div>
+    <div class="final-lines">
+      <p class="final-line reveal">You can leave whenever you want.</p>
+      <p class="final-line reveal reveal-delay-1">And you don't have to carry everything alone.</p>
+      <p class="final-line reveal reveal-delay-2">I'll still be here tomorrow.</p>
+    </div>
+    <p class="safety-note sans reveal reveal-delay-3">
+      If things ever feel unsafe or too difficult to manage alone, please reach out to someone you trust,
+      a counsellor, or an appropriate local support service. You deserve real help, not just a quiet page.
+    </p>
+    <div class="reveal reveal-delay-4">
+      <button class="btn-ghost sans" id="btn-close">Close for now</button>
+    </div>
+  </section>
+
+</div><!-- /main -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   CONTENT — personalised for Bachi
+═══════════════════════════════════════════════════════════════ */
+const CONTENT = {
+
+  letterSignature: "— Someone who thinks about you more than they say, Bachi",
+
+  letter: `<p class="drop-cap">I don't know exactly what you're feeling right now, Bachi — and I won't pretend that I do. I just wanted you to have somewhere that asks nothing from you. No performance, no explanation, no particular version of yourself that you have to show up as.</p>
+<p>You've been carrying a lot. I've noticed, even when I haven't known how to say it out loud. There are days when the weight of things doesn't have a neat explanation — it just sits there, heavy and present in a way that other people don't always see. And I wanted you to know that someone made this space specifically for you, on a day when I was thinking about you and wishing I could make things lighter.</p>
+<p>You don't have to be okay. You don't have to be getting better. You don't have to be moving in the right direction, or any direction. You just have to be here, which you already are. And that — just being here — is genuinely enough for today.</p>
+<p>I think you're braver than you give yourself credit for. Not in a dramatic way. In the quiet, daily way of showing up even when things are hard, of still caring about things even when caring costs you something, of being a specific and irreplaceable person who notices things and feels them fully. That's not a small thing to be.</p>`,
+
+  doors: [
+    {
+      title: "When everything feels heavy",
+      desc: "For when the weight has no clear reason.",
+      body: `<p>There are days when the weight of things doesn't have a good explanation. It just is — heavy, slow, and present in a way that other people don't always see.</p><p>You don't need to justify that weight to me. You don't need to have a reason that makes sense, or a timeline for when it ends. Some things are simply hard, and you're allowed to let them be hard without rushing yourself toward the end of them.</p><p>You're still moving. Even on the days it doesn't feel like it — you are still here, still breathing, still finding your way through it. That counts for something I don't have the right words for. But it counts.</p>`
+    },
+    {
+      title: "When you don't want to talk",
+      desc: "For when silence feels more true than words.",
+      body: `<p>Sometimes the hardest part is the expectation that you should explain yourself — to friends, to yourself, to the blank page in front of you. Words can feel like the wrong tool for the shape of what you're holding.</p><p>This page doesn't need you to speak. You can sit here as long as you'd like, in whatever silence feels most like you right now. You don't owe anyone an account of what's happening inside you.</p><p>And if you do find words, eventually, for any of it — I'll be here. I'm not in a hurry. I'm not keeping score of how long things take.</p>`
+    },
+    {
+      title: "When you need a reminder",
+      desc: "For when you've forgotten what's still true.",
+      body: `<p>You have gotten through every difficult day until now. Every single one. I know that might sound small. It probably doesn't feel like a remarkable thing. But I've been watching, and I think it is.</p><p>The version of you that exists on hard days is not a diminished version. It is still you — with all the same things that matter about you, still present, still real, still worth knowing.</p><p>You are not behind. There is no schedule for the kind of thing you're going through. There is just today, and you made it to today, and tomorrow will be its own thing when it arrives.</p>`
+    },
+    {
+      title: "When you're exhausted from pretending",
+      desc: "For when the performance has gone on too long.",
+      body: `<p>You don't have to pretend here. Not that you're fine, or getting there, or learning something valuable from the difficulty. You don't have to shape this into a story with a purpose yet.</p><p>Being tired of holding something together for other people's benefit is valid and real. The effort of performing okay is genuinely exhausting, and you're allowed to set it down, at least in here.</p><p>You don't have to manage how your pain lands for me. I can take the real version of it. I'm not going anywhere.</p>`
+    },
+    {
+      title: "When you doubt whether things will improve",
+      desc: "For the nights when it's hard to believe in tomorrow.",
+      body: `<p>Hope is not always easy to access. Some nights it feels like a thing that other people have access to that you don't, and that's a particular kind of lonely.</p><p>I won't tell you that everything will be fine, because I can't know that, and I don't think you need something that sounds like a script. What I can tell you is that the future is genuinely unknown — which means it includes possibilities that your current exhaustion can't see yet.</p><p>And that I will still be here in it. Whatever it holds. That part I can actually promise.</p>`
+    }
+  ],
+
+  stars: [
+    "You probably don't realise how much your presence matters to the people who know you.",
+    "There are so many things about you that deserve to exist beyond a difficult season.",
+    "You are more than the version of yourself that exists on your worst days.",
+    "The way you care about things — even when it costs you — is not a flaw. It's one of the best things about you.",
+    "You have made it through every hard day until today. That is not nothing.",
+    "Rest is not the same as giving up. Sometimes it is the only responsible thing.",
+    "Someone is glad you exist. More than one someone. Even when it doesn't feel that way.",
+    "The things you're hardest on yourself about are often the things other people don't even see.",
+    "You are allowed to take up space. You were not given a smaller portion of existence."
+  ],
+
+  memories: [
+    "You are allowed to have difficult days without having to earn your way out of them.",
+    "You don't have to explain everything perfectly for it to be true.",
+    "Rest is not failure. It is part of how living works.",
+    "You don't have to figure out your entire life tonight.",
+    "Someone noticing you is sometimes more important than someone fixing you.",
+    "The kindness you extend to other people — you are allowed to turn some of that toward yourself.",
+    "You are not too much. You are also not too little. You are a specific person who is still becoming.",
+    "The fact that you care about doing things well is worth something, even when it exhausts you.",
+    "You are not obligated to be a finished version of yourself.",
+    "Feeling things deeply is not a weakness. It is just a different kind of weight to carry.",
+    "You are allowed to change your mind, your direction, your plans — without owing anyone an explanation.",
+    "Being gentle with yourself is not giving up. It is what makes continuing possible."
+  ],
+
+  envelopes: [
+    {
+      title: "Open when you feel alone",
+      tag: "Isolation",
+      message: `<p>Loneliness has a specific quality that's different from simply being by yourself. It's the sense that your particular interior life — the way you see things, the things you notice — isn't quite landing anywhere. That you're broadcasting somewhere no one is tuned in.</p><p>I want you to know that I think about the way you see things. I find it worth something. The version of you that exists when you're not performing anything for anyone is the one I actually want to know. You're not alone in the way you fear you might be. Not completely.</p>`
+    },
+    {
+      title: "Open when you can't find the words",
+      tag: "Lost for language",
+      message: `<p>Language fails for the most important things. That's not a flaw in you — it's a flaw in language. Some of what you're carrying doesn't reduce to sentences, and you shouldn't have to compress it just to make it communicable.</p><p>You don't need to be articulate about this. You don't need to name it correctly before it's allowed to be real. It can just be what it is, inside you, without a label, for as long as it needs to be.</p>`
+    },
+    {
+      title: "Open when you've had a terrible day",
+      tag: "A hard one",
+      message: `<p>I'm sorry today was one of those days. They happen more often than they should, and they're exhausting in a way that sleep doesn't always fix.</p><p>You don't have to extract a lesson from this one. Not everything hard is instructive. Sometimes a difficult day is just a difficult day, and the only thing to do is get to the other side of it. You made it to here. That's what you did today. Let that be enough for tonight.</p>`
+    },
+    {
+      title: "Open when something good happens",
+      tag: "A moment of light",
+      message: `<p>You're allowed to let this one in. You don't have to hold it at a distance in case it gets taken away. You don't have to minimise it or wonder if you've earned it.</p><p>Something good happened. Let yourself feel it — all the way, without reservations. You deserve to have it count. I'm glad it happened. Tell me about it when you want to.</p>`
+    },
+    {
+      title: "Open when you need to remember that someone cares",
+      tag: "You are thought of",
+      message: `<p>Someone made you this. On a specific day, thinking about you specifically, wanting you to have somewhere to be without having to be anything in particular.</p><p>That's not a small thing. I made this because you matter to me in a way I don't always know how to say out loud — because you're worth the effort of trying, even when the effort feels inadequate. You are thought of. You are cared about. That hasn't changed and it won't.</p>`
+    },
+    {
+      title: "Open when you feel like a burden",
+      tag: "You are not",
+      message: `<p>You are not a burden. I know that's probably not easy to believe right now. The mind has a way of finding evidence for that particular fear, even when the evidence isn't real.</p><p>The truth is that the people who care about you choose to. Not out of obligation, not out of not having noticed — they've seen what it costs, and they're still here. That's not what burden looks like. That's what mattering looks like.</p>`
+    },
+    {
+      title: "Open on a night you can't sleep",
+      tag: "3am",
+      message: `<p>3am has its own particular quality. Everything feels more permanent than it is. The thoughts that arrive then have a way of presenting themselves as facts instead of fears.</p><p>Most of what feels true at 3am is not equally true at 10am. This doesn't mean your feelings aren't real — they are. But the darkness adds a weight to them that daylight tends to gently lift. You just have to get to the morning. That's all you have to do tonight.</p>`
+    },
+    {
+      title: "Open when you've been too hard on yourself",
+      tag: "Enough now",
+      message: `<p>You have done enough today. However much or little it looks like from the outside — you have carried what you carried, and you got through the hours, and that is genuinely enough.</p><p>The part of you that keeps score, that measures output and finds it wanting — that part isn't wrong that it wants things for you. It just doesn't know how to rest. Try to let it rest tonight. You can pick the measuring back up tomorrow if you need to. But tonight, you've done enough.</p>`
+    }
+  ]
+};
+
+/* ═══════════════════════════════════════════════
+   UTILITIES
+════════════════════════════════════════════════ */
+function isMobile() { return window.innerWidth < 700 || ('ontouchstart' in window); }
+
+/* ═══════════════════════════════════════════════
+   SCROLL PROGRESS BAR
+════════════════════════════════════════════════ */
+const scrollBar = document.getElementById('scroll-bar');
+function updateScrollBar() {
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+  if (max <= 0) return;
+  scrollBar.style.width = (window.scrollY / max * 100) + '%';
+}
+window.addEventListener('scroll', updateScrollBar, { passive: true });
+
+/* ═══════════════════════════════════════════════
+   OPENING PARTICLES
+════════════════════════════════════════════════ */
+(function initParticles() {
+  const canvas = document.getElementById('particles-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, dpr, particles = [], raf;
+
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width  = W * dpr; canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+  }
+
+  function make() {
+    particles = [];
+    const n = Math.min(60, Math.floor(W * H / 14000));
+    for (let i = 0; i < n; i++) {
+      particles.push({
+        x: Math.random() * W, y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.15, vy: -Math.random() * 0.25 - 0.05,
+        r: Math.random() * 1.4 + 0.3,
+        alpha: Math.random() * 0.4 + 0.1,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.phase += 0.008;
+      if (p.y < -5) { p.y = H + 5; p.x = Math.random() * W; }
+      const a = p.alpha * (0.7 + Math.sin(p.phase) * 0.3);
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(240,234,216,${a})`; ctx.fill();
+    });
+    raf = requestAnimationFrame(draw);
+  }
+
+  resize(); make(); draw(0);
+  window.addEventListener('resize', () => { resize(); make(); });
+
+  // Stop when opening screen hides
+  document.getElementById('btn-enter').addEventListener('click', () => {
+    setTimeout(() => cancelAnimationFrame(raf), 1200);
+  });
+})();
+
+/* ═══════════════════════════════════════════════
+   AMBIENT SOUND (Web Audio API)
+════════════════════════════════════════════════ */
+let audioCtx = null, gainNode = null, soundOn = false;
+const soundBtn = document.getElementById('sound-btn');
+const soundIcon = document.getElementById('sound-icon');
+const soundLabel = document.getElementById('sound-label');
+
+function buildAmbient() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    gainNode.connect(audioCtx.destination);
+
+    // Soft drone: layered sine oscillators
+    const freqs = [55, 82.5, 110, 146.8, 220];
+    freqs.forEach((f, i) => {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.value = f;
+      g.gain.value = [0.06, 0.03, 0.04, 0.02, 0.015][i] || 0.02;
+      osc.connect(g); g.connect(gainNode);
+      osc.start();
+      // Slow LFO on gain
+      const lfo = audioCtx.createOscillator();
+      const lfoG = audioCtx.createGain();
+      lfo.frequency.value = 0.05 + i * 0.02;
+      lfoG.gain.value = 0.01;
+      lfo.connect(lfoG); lfoG.connect(g.gain);
+      lfo.start();
+    });
+    // Pink noise layer
+    const bufSize = audioCtx.sampleRate * 2;
+    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for (let i = 0; i < bufSize; i++) {
+      const wn = Math.random() * 2 - 1;
+      b0=0.99886*b0+wn*0.0555179; b1=0.99332*b1+wn*0.0750759; b2=0.96900*b2+wn*0.1538520;
+      b3=0.86650*b3+wn*0.3104856; b4=0.55000*b4+wn*0.5329522; b5=-0.7616*b5-wn*0.0168980;
+      data[i] = (b0+b1+b2+b3+b4+b5+b6+wn*0.5362) * 0.11;
+      b6 = wn * 0.115926;
+    }
+    const noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = buf; noiseSource.loop = true;
+    const noiseGain = audioCtx.createGain(); noiseGain.gain.value = 0.012;
+    noiseSource.connect(noiseGain); noiseGain.connect(gainNode);
+    noiseSource.start();
+  } catch(e) { audioCtx = null; }
+}
+
+function toggleSound() {
+  if (!audioCtx) buildAmbient();
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  soundOn = !soundOn;
+  if (gainNode) {
+    gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(soundOn ? 0.7 : 0, audioCtx.currentTime + 1.5);
+  }
+  soundBtn.classList.toggle('on', soundOn);
+  soundIcon.textContent = soundOn ? '♪' : '♩';
+  soundLabel.textContent = soundOn ? 'on' : 'off';
+}
+soundBtn.addEventListener('click', toggleSound);
+
+// Gentle chime on star click
+function playChime() {
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 528;
+    g.gain.setValueAtTime(0, audioCtx.currentTime);
+    g.gain.linearRampToValueAtTime(0.12, audioCtx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 2);
+  } catch(e) {}
+}
+
+/* ═══════════════════════════════════════════════
+   POPULATE CONTENT
+════════════════════════════════════════════════ */
+
+// Letter date
+const now = new Date();
+const dateStr = now.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+document.getElementById('letter-date').textContent = dateStr;
+
+// Letter body & signature
+document.getElementById('letter-body').innerHTML = CONTENT.letter;
+document.getElementById('letter-signature').textContent = CONTENT.letterSignature;
+
+// Doors
+const doorsGrid = document.getElementById('doors-grid');
+CONTENT.doors.forEach((door, i) => {
+  const card = document.createElement('button');
+  card.className = 'door-card';
+  card.type = 'button';
+  card.innerHTML = `
+    <span class="door-num sans">${String(i + 1).padStart(2, '0')}</span>
+    <h3>${door.title}</h3>
+    <p class="door-desc sans">${door.desc}</p>
+    <span class="door-arrow sans">Open ›</span>
+  `;
+  card.addEventListener('click', () => openOverlay('Door ' + (i+1), door.title, door.body));
+  doorsGrid.appendChild(card);
+});
+
+// Memories
+const memoryList = document.getElementById('memory-list');
+const collectedNote = document.getElementById('collected-note');
+let collectedCount = 0;
+CONTENT.memories.forEach((mem, i) => {
+  const item = document.createElement('div');
+  item.className = 'memory-item';
+  item.setAttribute('role', 'button');
+  item.setAttribute('tabindex', '0');
+  item.setAttribute('aria-label', 'Keep this reminder: ' + mem);
+  item.innerHTML = `<span class="memory-dash">—</span><span class="memory-text">${mem}</span><span class="memory-heart" aria-hidden="true">♡</span>`;
+  function collect() {
+    if (item.classList.contains('collected')) return;
+    item.classList.add('collected');
+    item.querySelector('.memory-heart').textContent = '♥';
+    collectedCount++;
+    collectedNote.textContent = collectedCount === 1
+      ? 'You kept one. That one was worth keeping.'
+      : `You've kept ${collectedCount}. I hope they stay with you.`;
+    collectedNote.style.opacity = '1';
+  }
+  item.addEventListener('click', collect);
+  item.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); collect(); } });
+  memoryList.appendChild(item);
+});
+
+// Envelopes
+const envelopeGrid = document.getElementById('envelope-grid');
+CONTENT.envelopes.forEach((env, i) => {
+  const card = document.createElement('button');
+  card.type = 'button';
+  card.className = 'envelope-card';
+  card.innerHTML = `
+    <svg class="envelope-icon" viewBox="0 0 20 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="0.5" y="0.5" width="19" height="15" stroke="currentColor" stroke-opacity="0.5"/>
+      <path d="M0.5 0.5L10 9L19.5 0.5" stroke="currentColor" stroke-opacity="0.5"/>
+    </svg>
+    <div class="envelope-info">
+      <span class="envelope-title serif">${env.title}</span>
+      <span class="envelope-tag sans">${env.tag}</span>
+    </div>
+  `;
+  card.addEventListener('click', () => openOverlay('Open when', env.title, env.message));
+  envelopeGrid.appendChild(card);
+});
+
+
+/* ═══════════════════════════════════════════════
+   BREATHING EXERCISE
+════════════════════════════════════════════════ */
+(function initBreathe() {
+  const ring = document.getElementById('breathe-ring');
+  const instruction = document.getElementById('breathe-instruction');
+  const countEl = document.getElementById('breathe-count');
+  const cyclesEl = document.getElementById('breathe-cycles');
+  const toggleBtn = document.getElementById('breathe-toggle');
+
+  let running = false, phase = 'idle', timer = null, count = 0, cycles = 0;
+  const PHASES = [
+    { name: 'inhale',   label: 'breathe in',  duration: 4, cls: 'inhaling' },
+    { name: 'hold',     label: 'hold',         duration: 7, cls: 'holding'  },
+    { name: 'exhale',   label: 'breathe out',  duration: 8, cls: 'exhaling' },
+  ];
+  let phaseIdx = 0;
+
+  function clearPhaseClasses() {
+    ring.classList.remove('inhaling', 'holding', 'exhaling');
+  }
+
+  function startPhase() {
+    clearPhaseClasses();
+    const p = PHASES[phaseIdx];
+    ring.classList.add(p.cls);
+    instruction.textContent = p.label;
+    count = p.duration;
+    countEl.textContent = count;
+    timer = setInterval(() => {
+      count--;
+      countEl.textContent = count;
+      if (count <= 0) {
+        clearInterval(timer);
+        phaseIdx = (phaseIdx + 1) % PHASES.length;
+        if (phaseIdx === 0) {
+          cycles++;
+          cyclesEl.textContent = cycles === 1 ? '1 cycle complete' : `${cycles} cycles complete`;
+        }
+        if (running) startPhase();
+      }
+    }, 1000);
+  }
+
+  function start() {
+    running = true; phaseIdx = 0; cycles = 0;
+    cyclesEl.textContent = '';
+    toggleBtn.textContent = 'Stop';
+    startPhase();
+  }
+
+  function stop() {
+    running = false; clearInterval(timer);
+    clearPhaseClasses();
+    instruction.textContent = 'press to begin';
+    countEl.textContent = '';
+    toggleBtn.textContent = 'Start breathing';
+  }
+
+  toggleBtn.addEventListener('click', () => running ? stop() : start());
+  ring.addEventListener('click', () => running ? stop() : start());
+  ring.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); running ? stop() : start(); } });
+})();
+
+
+/* ═══════════════════════════════════════════════
+   OVERLAY
+════════════════════════════════════════════════ */
+const overlay = document.getElementById('overlay');
+const overlayLabel = document.getElementById('overlay-label');
+const overlayTitle = document.getElementById('overlay-title');
+const overlayBody  = document.getElementById('overlay-body');
+
+function openOverlay(label, title, body) {
+  overlayLabel.textContent = label;
+  overlayTitle.textContent = title;
+  overlayBody.innerHTML = body;
+  overlay.classList.add('open');
+  document.body.classList.add('overlay-open');
+  // Focus management for accessibility
+  setTimeout(() => document.getElementById('overlay-close').focus(), 100);
+}
+
+function closeOverlay() {
+  overlay.classList.remove('open');
+  document.body.classList.remove('overlay-open');
+}
+
+document.getElementById('overlay-close').addEventListener('click', closeOverlay);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeOverlay(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOverlay(); });
+// iOS: close on swipe down on overlay-box
+(function overlaySwipe() {
+  let startY = 0;
+  const box = document.querySelector('.overlay-box');
+  box.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
+  box.addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientY - startY > 80) closeOverlay();
+  }, { passive: true });
+})();
+
+
+/* ═══════════════════════════════════════════════
+   REVEAL ON SCROLL
+════════════════════════════════════════════════ */
+function observeReveals() {
+  const items = document.querySelectorAll('.reveal');
+  if (!('IntersectionObserver' in window)) {
+    items.forEach(el => el.classList.add('in-view')); return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in-view');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  items.forEach(el => io.observe(el));
+}
+
+
+/* ═══════════════════════════════════════════════
+   OPENING / CLOSING FLOW
+════════════════════════════════════════════════ */
+const screenOpen  = document.getElementById('screen-open');
+const screenClose = document.getElementById('screen-close');
+const mainEl      = document.getElementById('main');
+
+window.addEventListener('load', () => {
+  setTimeout(() => screenOpen.classList.add('ready'), 500);
+});
+
+document.getElementById('btn-enter').addEventListener('click', () => {
+  // iOS AudioContext must be started in a user gesture
+  try { if (!audioCtx) buildAmbient(); } catch(e) {}
+  screenOpen.classList.add('hidden');
+  setTimeout(() => {
+    mainEl.classList.add('visible');
+    soundBtn.classList.add('visible');
+    observeReveals();
+  }, 800);
+});
+
+document.getElementById('btn-close').addEventListener('click', () => {
+  soundBtn.classList.remove('visible');
+  mainEl.style.transition = 'opacity 1.4s';
+  mainEl.style.opacity = '0';
+  setTimeout(() => { screenClose.classList.remove('hidden'); }, 1000);
+  setTimeout(() => {
+    mainEl.style.opacity = '';
+    mainEl.style.transition = '';
+    mainEl.classList.remove('visible');
+    screenClose.classList.add('hidden');
+    screenOpen.classList.remove('hidden');
+    screenOpen.classList.remove('ready');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    setTimeout(() => { mainEl.classList.add('visible'); soundBtn.classList.add('visible'); observeReveals(); }, 200);
+  }, 5500);
+});
+
+
+/* ═══════════════════════════════════════════════
+   CONSTELLATION CANVAS
+════════════════════════════════════════════════ */
+(function initConstellation() {
+  const canvas  = document.getElementById('star-canvas');
+  const ctx     = canvas.getContext('2d');
+  const tooltip = document.getElementById('star-tooltip');
+
+  let W, H, dpr;
+  let stars = [], brightStars = [], lines = [];
+  let activeStar = null;
+  let favourites = new Set(); // stars tapped at least once
+  let tooltipTimeout = null;
+  let raf;
+  const STAR_COUNT   = 240;
+  const BRIGHT_COUNT = Math.min(CONTENT.stars.length, 9);
+
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    W = canvas.offsetWidth;
+    H = canvas.offsetHeight;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+    cancelAnimationFrame(raf);
+    init();
+    raf = requestAnimationFrame(t => draw(t / 1000));
+  }
+
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  function init() {
+    stars = [];
+    brightStars = [];
+    lines = [];
+
+    for (let i = 0; i < STAR_COUNT; i++) {
+      stars.push({
+        x: rand(0, W), y: rand(0, H),
+        r: rand(0.25, 1.15),
+        alpha: rand(0.1, 0.6),
+        speed: rand(0.01, 0.04),
+        offset: rand(0, Math.PI * 2)
+      });
+    }
+
+    for (let i = 0; i < BRIGHT_COUNT; i++) {
+      brightStars.push({
+        x: rand(W * 0.07, W * 0.93),
+        y: rand(H * 0.08, H * 0.9),
+        r: rand(1.9, 3.4),
+        alpha: rand(0.7, 1),
+        pulse: rand(0, Math.PI * 2),
+        messageIndex: i
+      });
+    }
+
+    // Constellation lines
+    const used = new Set();
+    brightStars.forEach((a, ai) => {
+      brightStars.forEach((b, bi) => {
+        if (ai >= bi) return;
+        const key = ai + '-' + bi;
+        if (used.has(key)) return;
+        const dist = Math.hypot(a.x - b.x, a.y - b.y);
+        if (dist < W * 0.38 && Math.random() > 0.5) {
+          lines.push({ ai, bi }); used.add(key);
+        }
+      });
+    });
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+
+    // Subtle bg gradient
+    const grad = ctx.createRadialGradient(W * 0.5, H * 0.38, 0, W * 0.5, H * 0.38, W * 0.75);
+    grad.addColorStop(0, 'rgba(26,22,36,0.55)');
+    grad.addColorStop(1, 'rgba(10,10,12,0)');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+
+    // Dim stars
+    stars.forEach(s => {
+      const fl = Math.sin(t * s.speed + s.offset) * 0.12;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(240,234,216,${Math.max(0, s.alpha + fl)})`; ctx.fill();
+    });
+
+    // Lines
+    lines.forEach(l => {
+      const a = brightStars[l.ai], b = brightStars[l.bi];
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = 'rgba(157,150,176,0.1)'; ctx.lineWidth = 0.5; ctx.stroke();
+    });
+
+    // Bright stars
+    brightStars.forEach((s, i) => {
+      s.pulse += 0.016;
+      const pls = Math.sin(s.pulse) * 0.14;
+      const isHov = activeStar === i;
+      const isFav = favourites.has(i);
+
+      // Glow
+      const glowR = isHov ? 26 : (isFav ? 20 : 14);
+      const glowA = isHov ? 0.32 : (isFav ? 0.22 : 0.16);
+      const glowCol = isFav ? '240,200,180' : '157,150,176';
+      const glow = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowR);
+      glow.addColorStop(0, `rgba(${glowCol},${glowA + pls * 0.08})`);
+      glow.addColorStop(1, `rgba(${glowCol},0)`);
+      ctx.beginPath(); ctx.arc(s.x, s.y, glowR, 0, Math.PI * 2);
+      ctx.fillStyle = glow; ctx.fill();
+
+      // Core
+      const coreCol = isFav ? `rgba(255,230,210,${s.alpha + pls})` : `rgba(240,234,216,${s.alpha + pls})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r + (isHov ? 1.2 : 0), 0, Math.PI * 2);
+      ctx.fillStyle = coreCol; ctx.fill();
+
+      // Sparkle cross on hover
+      if (isHov) {
+        ctx.save(); ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = 'rgba(240,234,216,0.8)'; ctx.lineWidth = 0.8;
+        for (let d of [-1, 1]) {
+          ctx.beginPath(); ctx.moveTo(s.x - 7*d, s.y); ctx.lineTo(s.x + 7*d, s.y); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(s.x, s.y - 7*d); ctx.lineTo(s.x, s.y + 7*d); ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // Small heart above favourite stars
+      if (isFav && !isHov) {
+        ctx.save(); ctx.globalAlpha = 0.5;
+        ctx.fillStyle = 'rgba(240,200,180,0.8)';
+        ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('♥', s.x, s.y - s.r - 7);
+        ctx.restore();
+      }
+    });
+
+    raf = requestAnimationFrame(t => draw(t / 1000));
+  }
+
+  // FIX: proper coords for both mouse and touch
+  function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
+    return {
+      x: (src.clientX - rect.left),
+      y: (src.clientY - rect.top)
+    };
+  }
+
+  function findHoveredStar(x, y) {
+    const R = isMobile() ? 34 : 28; // larger touch target on mobile
+    for (let i = 0; i < brightStars.length; i++) {
+      const s = brightStars[i];
+      if (Math.hypot(x - s.x, y - s.y) < R) return i;
+    }
+    return null;
+  }
+
+  canvas.addEventListener('mousemove', e => {
+    const { x, y } = getCanvasCoords(e);
+    const found = findHoveredStar(x, y);
+    activeStar = found;
+    canvas.style.cursor = found !== null ? 'pointer' : 'default';
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    activeStar = null;
+    canvas.style.cursor = 'default';
+  });
+
+  canvas.addEventListener('click', e => {
+    const { x, y } = getCanvasCoords(e);
+    const found = findHoveredStar(x, y);
+    if (found !== null) {
+      favourites.add(found);
+      showTooltip(e, CONTENT.stars[found % CONTENT.stars.length]);
+      playChime();
+    }
+  });
+
+  // FIX: use changedTouches for touchend (touches is empty at touchend)
+  canvas.addEventListener('touchend', e => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    const { x, y } = getCanvasCoords({ changedTouches: e.changedTouches });
+    const found = findHoveredStar(x, y);
+    if (found !== null) {
+      favourites.add(found);
+      showTooltip({ clientX: touch.clientX, clientY: touch.clientY }, CONTENT.stars[found % CONTENT.stars.length]);
+      playChime();
+    }
+  }, { passive: false });
+
+  function showTooltip(e, text) {
+    tooltip.textContent = text;
+    clearTimeout(tooltipTimeout);
+    const margin = 16;
+    const tw = Math.min(300, window.innerWidth - margin * 2);
+    tooltip.style.maxWidth = tw + 'px';
+    // Position — prefer above on mobile
+    let lx, ly;
+    if (isMobile()) {
+      lx = window.innerWidth / 2 - tw / 2;
+      ly = Math.max(margin, e.clientY - 130);
+    } else {
+      lx = e.clientX + 20; ly = e.clientY - 12;
+      if (lx + tw > window.innerWidth - margin) lx = e.clientX - tw - 20;
+      if (ly + 120 > window.innerHeight - margin) ly = e.clientY - 120;
+    }
+    tooltip.style.left = lx + 'px';
+    tooltip.style.top  = ly + 'px';
+    tooltip.classList.add('visible');
+    tooltipTimeout = setTimeout(() => tooltip.classList.remove('visible'), 4800);
+  }
+
+  // Tap anywhere else closes tooltip
+  document.addEventListener('touchstart', e => {
+    if (!canvas.contains(e.target) && !tooltip.contains(e.target)) {
+      tooltip.classList.remove('visible');
+    }
+  }, { passive: true });
+  document.addEventListener('click', e => {
+    if (!canvas.contains(e.target)) tooltip.classList.remove('visible');
+  });
+
+  resize();
+  window.addEventListener('resize', resize);
+})();
+
+</script>
+</body>
+</html>
